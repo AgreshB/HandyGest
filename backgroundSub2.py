@@ -2,6 +2,7 @@ import cv2
 import numpy as np 
 import imutils 
 import backgroundSub
+import tensorflow as tf 
 
 class backgroundSub2:
 
@@ -9,13 +10,19 @@ class backgroundSub2:
         self.isBgCaptured = False
         # Background subtractor learning rate
         self.bgSubtractorLr = 0
+        self.bgSubThreshold = 35
+
         self.x0 = 0
         self.y0 = 0
         self.height= 0
         self.width = 0
         self.roiColor = (255, 0, 0)
-        self.bgSubThreshold = 35
+
         self.oldBgCapture = False
+
+        self.startPredict = False
+        self.model = tf.keras.models.load_model("model/custModel-6-V2.h5")
+        self.class_names = ["palm", "fist","ok","peace","L","index"] 
 
     def setupFrame(self, frame_width, frame_height):
         """self.x0 and self.y0 are top left corner coordinates
@@ -33,6 +40,15 @@ class backgroundSub2:
         fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel, iterations=2)
         fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_CLOSE, kernel, iterations=2)
         return cv2.bitwise_and(frame, frame, mask=fgmask)
+    
+    def predictImage(self,image):
+        resImage= cv2.resize(image,(200,200))
+        X=[]
+        X.append(resImage)
+        X = np.array(X,dtype="float16")
+        X = X.reshape(1,200,200,1)
+        prediction = self.model.predict(X)
+        return np.argmax(prediction)
 
     def subtraction(self): 
         cap = cv2.VideoCapture(0)
@@ -53,21 +69,13 @@ class backgroundSub2:
                 bgSubMask = self.bgSubMasking(roi)
                 grey = cv2.cvtColor(bgSubMask,cv2.COLOR_BGR2GRAY)
                 thresholded = cv2.threshold(grey, 20, 255, cv2.THRESH_BINARY)[1]
-                cv2.imshow("bgSubMask", grey)
                 cv2.imshow("threshold",thresholded)
 
-            if(self.oldBgCapture):
-                if frame_number < 30:
-                    backgroundSub.run_avg(roi,0.5)
-                    frame_number +=1
-                else :
-                    hand = backgroundSub.seperate(roi)
-                    if hand is not None :
-                        thres = hand 
-                        thres = cv2.cvtColor(hand,cv2.COLOR_BGR2GRAY)
-                        #cv2.drawContours(contor,[segmented + (right,top)],-1,(0,0,255))
-                        cv2.imshow('threshold', thres)
-
+            if(self.startPredict):
+                resImage = cv2.resize(thresholded,(200,200))
+                gesture =self.class_names[self.predictImage(thresholded)]
+                cv2.putText(frame,gesture,(10,100),cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,0),cv2.LINE_AA)
+            
             cv2.imshow('Original Frame',frame)
             cv2.imshow('cropped',roi)
             k = cv2.waitKey(1) & 0xFF
@@ -79,12 +87,14 @@ class backgroundSub2:
                 frame_number=0
             elif k ==ord('q'):
                 break
+            elif k ==ord('p'):
+                self.startPredict = not self.startPredict
             elif k == ord('y'):
-                # movinf roi up 
-                self.y0 -= 2
+                # moving roi up 
+                self.y0 -= 5
             elif k == ord('x'):
                 #moving roi to left
-                self.x0 -= 2
+                self.x0 -= 5
         cap.release()
         cv2.destroyAllWindows()
 
