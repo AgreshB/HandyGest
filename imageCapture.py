@@ -102,7 +102,7 @@ if __name__ == "__main__":
         cv2.putText(rgb,class_names[predictionGest],(10,100),cv2.FONT_HERSHEY_SIMPLEX,6,(0,0,0),2)
 
         cv2.imshow('Original Frame', rgb)
-        cv2.imshow('grey',grey)
+        #cv2.imshow('grey',grey)
         #cv2.imshow('threshold', thres)
         #cv2.waitKey(0)
         if cv2.waitKey(1) & 0xFF == ord('q'):

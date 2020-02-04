@@ -24,11 +24,11 @@ def seperate(image):
     thres = cv2.GaussianBlur(thres,(5,5),0)
 
     # get the contours in the thresholded image
-    (cont, _) = cv2.findContours(thres.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #(cont, _) = cv2.findContours(thres.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # return None, if no contours detected
-    if len(cont) == 0:
-        return
-    else:
-        segmented = max(cont, key=cv2.contourArea)
-        return (thres, segmented)
+    # if len(cont) == 0:
+    #     return
+    # else:
+    #segmented = max(cont, key=cv2.contourArea)
+    return (thres)
