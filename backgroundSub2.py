@@ -25,7 +25,7 @@ class backgroundSub2:
         self.ys = [9.0/20.0, 10.0/20.0, 11.0/20.0]
 
         self.startPredict = False
-        self.model = tf.keras.models.load_model("model/custModel-7.h5")
+        self.model = tf.keras.models.load_model("model/custModelOrgRes-9.h5")
         self.class_names = ["palm", "fist","ok","peace","L","index","None"] 
         self.startExecute = False
 
@@ -86,7 +86,6 @@ class backgroundSub2:
         mask = cv2.bitwise_and(histMask, bgSubMask)
         return mask
 
-    
     def bgSubMasking(self, frame):
         fgmask = self.bgSubtractor.apply(frame, learningRate=self.bgSubtractorLr)
         kernel = np.ones((4, 4), np.uint8)
@@ -96,11 +95,11 @@ class backgroundSub2:
         return cv2.bitwise_and(frame, frame, mask=fgmask)
     
     def predictImage(self,image):
-        resImage= cv2.resize(image,(200,200))
+        resImage= cv2.resize(image,(300,300))
         X=[]
         X.append(resImage)
         X = np.array(X,dtype="float16")
-        X = X.reshape(1,200,200,1)
+        X = X.reshape(1,300,300,1)
         prediction = self.model.predict(X)
         return np.argmax(prediction)
     
@@ -175,9 +174,9 @@ class backgroundSub2:
             #print options window  
             #cv2.putText(options,self.printMenu(),(5,5),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
             cv2.putText(options,"Background Capture :{}".format(self.isBgCaptured),(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
-            cv2.putText(options,"Prediction started :{}".format(self.startPredict),(10,200),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
+            cv2.putText(options,"Prediction started :{}".format(self.startPredict),(10,400),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
             cv2.putText(options,"Execution started  :{}".format(self.startExecute),(10,300),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
-            cv2.putText(options,"Hist Capture       :{}".format(self.isHandHistCreated),(10,400),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
+            cv2.putText(options,"Hist Capture       :{}".format(self.isHandHistCreated),(10,200),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
 
             cv2.imshow('Original Frame',frame)
             cv2.imshow('Status',options)
@@ -206,7 +205,6 @@ class backgroundSub2:
             elif k == ord('a'):
                 #moving roi to left
                 self.x0 -= 5
-
         cap.release()
         cv2.destroyAllWindows()
 

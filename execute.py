@@ -10,7 +10,8 @@ class process:
         self.isMute = False
         self.app = appName
         self.previous = ""
-        self.exceptionGest = ['L','index']
+        self.exceptionGest = ['L','ok']
+        self.switchCounter=0
 
 
     def openApp(self):
@@ -57,7 +58,11 @@ class process:
         if command == self.previous:
             return
         else:
-            self.runCommand(command)
+            if(self.switchCounter >3):
+                self.runCommand(command)
+                self.switchCounter =0
+            else:
+                self.switchCounter+=1
         
 
 
