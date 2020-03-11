@@ -11,6 +11,7 @@ class process:
         self.app = appName
         self.previous = ""
         self.exceptionGest = ['L','ok']
+        self.commandList = {"L": 'Volume Down', "ok":'Volume Up' , "fist":'Mute' , "palm" : 'Unmute' , "peace":'Pause' , "index":'Play'}
         self.switchCounter=0
 
 
@@ -18,6 +19,12 @@ class process:
         self.appRunning = True
         subprocess.call(["/usr/bin/open", "/Applications/{}.app".format(self.app)])
 
+    def printMenu(self):
+        menu= ""
+        for command in self.commandList.keys():
+            menu +="{:<8}: {:<8}\n".format(command,self.commandList[command])
+        return menu
+    
     def runCommand(self, command):
         if command =='None':
             self.previous = command

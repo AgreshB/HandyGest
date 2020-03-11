@@ -31,6 +31,7 @@ class backgroundSub2:
 
         self.frame_number = 0
         self.commandList=[]
+        self.showStats = False
 
     def setupFrame(self, frame_width, frame_height):
         """self.x0 and self.y0 are top left corner coordinates
@@ -78,10 +79,13 @@ class backgroundSub2:
         roi = frame[self.y0:self.y0 + self.height, self.x0:self.x0 + self.width,:]
         # Color masking
         histMask = self.histMasking(roi, handHist)
-        #cv2.imshow("histMask", histMask)
         # Background substraction
         bgSubMask = self.bgSubMasking(roi)
-        #cv2.imshow("bgSubMask", bgSubMask)
+
+        if(self.showStats):
+            cv2.imshow("bgMask", bgSubMask)
+            cv2.imshow("histMask", histMask)
+        
         # final mask take bitwise and of both
         mask = cv2.bitwise_and(histMask, bgSubMask)
         return mask
@@ -105,7 +109,8 @@ class backgroundSub2:
     
     def runCommand(self):
         commandToRun = max(set(self.commandList) , key= self.commandList.count)
-        self.process.checkAndRun(commandToRun)
+        if(self.startExecute):
+            self.process.checkAndRun(commandToRun)
         self.frame_number = 0
         self.commandList =[]
         return commandToRun
@@ -117,10 +122,11 @@ class backgroundSub2:
         for x in self.xs:
             for y in self.ys:
                 x0, y0 = int(x*rows), int(y*cols)
-                cv2.rectangle(frame1, (self.y0+ y0, self.x0+ x0), (self.y0+ y0 + 20, self.x0+ x0 + 20), (0, 255, 0), 1)
+                cv2.rectangle(frame1, (self.y0+ y0, self.x0+ x0), (self.y0+ y0 + 20, self.x0+ x0 + 20), (0, 0, 0), 1)
         return frame1 
     
     def subtraction(self): 
+        check=0
         cap = cv2.VideoCapture(0)
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -131,8 +137,11 @@ class backgroundSub2:
 
         cv2.namedWindow("Status",cv2.WINDOW_NORMAL)
         cv2.namedWindow('Original Frame',cv2.WINDOW_NORMAL)
-
-        cv2.namedWindow("threshold",cv2.WINDOW_NORMAL)
+        if(self.showStats):
+            cv2.namedWindow("threshold",cv2.WINDOW_NORMAL)
+            cv2.namedWindow("histMask",cv2.WINDOW_NORMAL)
+            cv2.namedWindow("bgMask",cv2.WINDOW_NORMAL)
+        
         cv2.moveWindow('Original Frame' ,6,27)
         cv2.moveWindow('Status' ,6,327)
         cv2.moveWindow('threshold' ,6,550)
@@ -156,19 +165,16 @@ class backgroundSub2:
                 handMask = self.detectHand(frame,handHist)
                 grey = cv2.cvtColor(handMask,cv2.COLOR_BGR2GRAY)
                 thresholded = cv2.threshold(grey, 20, 255, cv2.THRESH_BINARY)[1]
-                cv2.imshow("threshold",thresholded)
+                
             elif not self.isHandHistCreated:
                 frame = self.drawRect(frame)
             
             if(self.startPredict):
-                resImage = cv2.resize(thresholded,(200,200))
+                resImage = cv2.resize(thresholded,(300,300))
                 gesture1 =self.class_names[self.predictImage(thresholded)]
                 self.commandList.append(gesture1)
                 if (self.frame_number % 5 == 0):
-                    self.frame_number =0
-                    #gesture = max(set(self.commandList) , key= self.commandList.count)
-                    if (self.startExecute):
-                        gesture = self.runCommand()
+                    gesture = self.runCommand()
                 cv2.putText(frame,gesture,(10,100),cv2.FONT_HERSHEY_SIMPLEX,2,(0,0,0),cv2.LINE_AA)
 
             #print options window  
@@ -180,12 +186,21 @@ class backgroundSub2:
 
             cv2.imshow('Original Frame',frame)
             cv2.imshow('Status',options)
+
+            if(self.showStats):
+                cv2.imshow("threshold",thresholded)
+            elif(check!=0):
+                cv2.destroyWindow("threshold")
+                cv2.destroyWindow("histMask")
+                cv2.destroyWindow("bgMask")
+                check = 0
+            
             k = cv2.waitKey(1) & 0xFF
             if k == ord('b'):
                 self.bgSubtractor = cv2.createBackgroundSubtractorMOG2(10, self.bgSubThreshold,detectShadows=False)
                 self.isBgCaptured = True
             elif k== ord('z'):
-                self.isHandHistCreated = True
+                self.isHandHistCreated = not self.isHandHistCreated
                 handHist = self.createHandHistogram(roi)
             elif k ==ord('q'):
                 break
@@ -205,19 +220,14 @@ class backgroundSub2:
             elif k == ord('a'):
                 #moving roi to left
                 self.x0 -= 5
+            elif k ==ord('o'):
+                self.showStats = not self.showStats
+                check =1
         cap.release()
         cv2.destroyAllWindows()
 
     def printMenu(self):
         menu =""
-        # print("-------------------------------------------")
-        # print("               HANDY GEST                  ")
-        # print("-------------------------------------------")
-        # print("OPTIONS:")
-        # print("To Caputure BAckground (or re-calib): Press b")
-        # print("To move the ROI                     : Use w a s d ")
-        # print("To TOGGLE PREDICTION                : Press p")
-        # print("To TOGGLE EXECUTION                 : Press e")
         menu +="-------------------------------------------\n"
         menu +="               HANDY GEST                  \n"
         menu +="-------------------------------------------\n"
@@ -227,10 +237,11 @@ class backgroundSub2:
         menu +="To TOGGLE PREDICTION                : Press p\n"
         menu +="To TOGGLE EXECUTION                 : Press e\n"
         menu +="To Capture HandHistogram            : Press z\n"
-        print(menu)
+        menu +="\nCOMMAND LIST \n"
+        menu +=self.process.printMenu()
         return menu
 
 if __name__ == "__main__":
     detect = backgroundSub2()
-    menu = detect.printMenu()
+    print(detect.printMenu())
     detect.subtraction()
