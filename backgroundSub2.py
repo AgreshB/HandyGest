@@ -3,23 +3,27 @@ import numpy as np
 import imutils 
 import backgroundSub
 import tensorflow as tf 
+import PySimpleGUI as sg
 from execute import process
+
 
 class backgroundSub2:
 
-    def __init__(self):
+    def __init__(self,name):
         self.isBgCaptured = False
         # Background subtractor learning rate
         self.bgSubtractorLr = 0
         self.bgSubThreshold = 35
         self.isHandHistCreated = False
+        self.isRunning = False
 
         self.x0 = 0
         self.y0 = 0
         self.height= 0
         self.width = 0
         self.roiColor = (255, 0, 0)
-        self.process = process('VLC')
+        self.process = process(name)
+        self.currentApp = name
 
         self.xs = [6.0/20.0, 9.0/20.0, 12.0/20.0]
         self.ys = [9.0/20.0, 10.0/20.0, 11.0/20.0]
@@ -32,6 +36,8 @@ class backgroundSub2:
         self.frame_number = 0
         self.commandList=[]
         self.showStats = False
+        self.showCommands = False
+
 
     def setupFrame(self, frame_width, frame_height):
         """self.x0 and self.y0 are top left corner coordinates
@@ -126,6 +132,7 @@ class backgroundSub2:
         return frame1 
     
     def subtraction(self): 
+        self.isRunning = True
         check=0
         cap = cv2.VideoCapture(0)
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -134,6 +141,7 @@ class backgroundSub2:
 
         #creating a black image for options window 
         options = np.zeros(shape=[512, 512, 3], dtype=np.uint8)
+        helpWin = np.zeros(shape=[512, 512, 3], dtype=np.uint8)
 
         cv2.namedWindow("Status",cv2.WINDOW_NORMAL)
         cv2.namedWindow('Original Frame',cv2.WINDOW_NORMAL)
@@ -143,7 +151,6 @@ class backgroundSub2:
             cv2.namedWindow("bgMask",cv2.WINDOW_NORMAL)
         
         cv2.moveWindow('Original Frame' ,6,27)
-        cv2.moveWindow('Status' ,6,327)
         cv2.moveWindow('threshold' ,6,550)
         gesture ='None'
         handHist = None
@@ -155,11 +162,6 @@ class backgroundSub2:
             roi = frame[self.y0:self.y0 + self.height, self.x0:self.x0 + self.width,:]
             self.frame_number +=1
 
-            # if(self.isBgCaptured):
-            #     bgSubMask = self.bgSubMasking(roi)
-            #     grey = cv2.cvtColor(bgSubMask,cv2.COLOR_BGR2GRAY)
-            #     thresholded = cv2.threshold(grey, 20, 255, cv2.THRESH_BINARY)[1]
-            #     cv2.imshow("threshold",thresholded)
 
             if(self.isHandHistCreated and self.isBgCaptured):
                 handMask = self.detectHand(frame,handHist)
@@ -180,13 +182,13 @@ class backgroundSub2:
             #print options window  
             #cv2.putText(options,self.printMenu(),(5,5),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
             cv2.putText(options,"Background Capture :{}".format(self.isBgCaptured),(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
-            cv2.putText(options,"Prediction started :{}".format(self.startPredict),(10,400),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
-            cv2.putText(options,"Execution started  :{}".format(self.startExecute),(10,300),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
             cv2.putText(options,"Hist Capture       :{}".format(self.isHandHistCreated),(10,200),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
+            cv2.putText(options,"Execution started  :{0} ({1})".format(self.startExecute,self.process.app),(10,300),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
+            cv2.putText(options,"Prediction started :{}".format(self.startPredict),(10,400),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255))
 
             cv2.imshow('Original Frame',frame)
             cv2.imshow('Status',options)
-
+        
             if(self.showStats):
                 cv2.imshow("threshold",thresholded)
             elif(check!=0):
@@ -194,6 +196,10 @@ class backgroundSub2:
                 cv2.destroyWindow("histMask")
                 cv2.destroyWindow("bgMask")
                 check = 0
+            
+            if(self.showCommands):
+                helpWin = self.printHelp(helpWin)
+                cv2.imshow('Help',helpWin)
             
             k = cv2.waitKey(1) & 0xFF
             if k == ord('b'):
@@ -210,6 +216,8 @@ class backgroundSub2:
             elif k ==ord('e'):
                 self.frame_number = 0
                 self.startExecute = not self.startExecute
+            elif k ==ord('r'):
+                self.printStatus()
             elif k == ord('w'):
                 # moving roi up 
                 self.y0 -= 5
@@ -223,25 +231,64 @@ class backgroundSub2:
             elif k ==ord('o'):
                 self.showStats = not self.showStats
                 check =1
+            elif k ==ord('h'):
+                self.helper()
+                # self.showCommands = not self.showCommands
+                # if(not self.showCommands):
+                #     cv2.destroyWindow('Help')
         cap.release()
         cv2.destroyAllWindows()
+        self.isRunning=False
 
     def printMenu(self):
-        menu =""
-        menu +="-------------------------------------------\n"
-        menu +="               HANDY GEST                  \n"
-        menu +="-------------------------------------------\n"
-        menu +="OPTIONS:\n"
-        menu +="To Caputure BAckground (or re-calib): Press b\n"
-        menu +="To move the ROI                     : Use w a s d\n"
-        menu +="To TOGGLE PREDICTION                : Press p\n"
-        menu +="To TOGGLE EXECUTION                 : Press e\n"
-        menu +="To Capture HandHistogram            : Press z\n"
-        menu +="\nCOMMAND LIST \n"
-        menu +=self.process.printMenu()
+        menu =[]
+        menu.append("To Caputure BAckground (or re-calib): Press b\n")
+        menu.append("To move the ROI                     : Use w a s d\n")
+        menu.append("To TOGGLE PREDICTION                : Press p\n")
+        menu.append("To TOGGLE EXECUTION                 : Press e\n")
+        menu.append("To Capture HandHistogram            : Press z\n")
+        menu.append("To Open Status Window               : Press r\n")
+        menu.append("To Toggle Stats                     : Press o\n")
+        menu.append("\nCOMMAND LIST \n")
+        for pr in self.process.printMenu():
+            menu.append(pr)
         return menu
+        
+    def run(self,app):
+        if app != self.currentApp:
+            self.process.resetApp(app)
+            self.currentApp = app
+        if(not self.isRunning):
+            self.subtraction()
 
-if __name__ == "__main__":
-    detect = backgroundSub2()
-    print(detect.printMenu())
-    detect.subtraction()
+    def helper(self):
+        layoutHelp = []
+        layoutHelp.append([sg.Text('OPTIONS', size=(20, 1), font=("Helvetica", 25))])
+        menu = self.printMenu()
+        for string in menu:
+            layoutHelp.append([sg.Text(string)])
+        layoutHelp.append([sg.Quit()])
+        helpW = sg.Window('Help', layoutHelp)
+        event, value = helpW.read()
+        if event in ('Quit', None):
+            helpW.close()
+    
+    def printStatus(self):
+        statusLayout = [
+            [sg.Text('STAUTUS', size=(20, 1), font=("Helvetica", 25))],
+            [sg.Text('Background Capture :{}'.format(self.isBgCaptured), size=(30, 1), font=("Helvetica", 25))],
+            [sg.Text('Hist Capture       :{}'.format(self.isHandHistCreated))],
+            [sg.Text('Execution started  :{0} ({1})'.format(self.startExecute,self.process.app))],
+            [sg.Text('Prediction started :{}'.format(self.startPredict))],
+            [sg.Radio('VLC', "RADIO1", default=True,key = 'VLC'), sg.Radio('Chrome', "RADIO1",key = 'Chrome')],
+            [sg.Quit()]
+       ]
+        statusWindow = sg.Window('Status and options',statusLayout)
+        event , value = statusWindow.read()
+        apps= ['VLC','Chrome']
+        currentApp = self.currentApp
+        if value[self.currentApp]==False:
+            apps.remove(self.currentApp)
+            currentApp = apps[0]
+        statusWindow.close()
+        self.run(currentApp)
