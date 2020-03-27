@@ -1,6 +1,6 @@
 cv2 
 numpy 
 imutils 
-tensorflow==2.0
+tensorflow>=2.0.1
 PySimpleGUI
 pyautogui
