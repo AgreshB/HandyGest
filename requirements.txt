@@ -1,0 +1,6 @@
+cv2 
+numpy 
+imutils 
+tensorflow==2.0
+PySimpleGUI
+pyautogui
