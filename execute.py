@@ -11,7 +11,8 @@ class process:
         self.app = appName
         self.previous = ""
         self.exceptionGest = {"VLC":['L','ok'] , "Chrome":['index','peace']}
-        self.commandList = {"L": 'Volume Down', "ok":'Volume Up' , "fist":'Mute' , "palm" : 'Unmute' , "peace":'Pause' , "index":'Play'}
+        self.commandList = {'VLC':{"L": 'Volume Down', "ok":'Volume Up' , "fist":'Mute' , "palm" : 'Unmute' , "peace":'Pause' , "index":'Play'},
+        'Chrome':{"L":'Full Screen',"ok":'Refresh',"fist":'Go to previous page' , "palm":'Go forward' , "peace":'Scroll up' , "index":'Scroll down'}}
         self.switchCounter=0
 
 
@@ -21,8 +22,9 @@ class process:
 
     def printMenu(self):
         menu=[]
-        for command in self.commandList.keys():
-            menu.append("{:<8}: {:<8}\n".format(command,self.commandList[command]))
+        commands = self.commandList[self.app]
+        for command in commands.keys():
+            menu.append("{:<8}: {:<8}\n".format(command,commands[command]))
         return menu
     
     def runCommand(self, command):
@@ -66,7 +68,7 @@ class process:
                 pgui.hotkey("command","right")
             elif command == 'L':
                 #toggle full screen
-                pgui.hotkey("control","command","f")
+                pgui.hotkey("ctrl","command","f")
             
         self.previous = command
     

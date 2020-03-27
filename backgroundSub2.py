@@ -1,7 +1,6 @@
 import cv2 
 import numpy as np 
 import imutils 
-import backgroundSub
 import tensorflow as tf 
 import PySimpleGUI as sg
 from execute import process
@@ -275,8 +274,8 @@ class backgroundSub2:
     
     def printStatus(self):
         statusLayout = [
-            [sg.Text('STAUTUS', size=(20, 1), font=("Helvetica", 25))],
-            [sg.Text('Background Capture :{}'.format(self.isBgCaptured), size=(30, 1), font=("Helvetica", 25))],
+            [sg.Text('STATUS', size=(20, 1), font=("Helvetica", 25))],
+            [sg.Text('Background Capture :{}'.format(self.isBgCaptured))],
             [sg.Text('Hist Capture       :{}'.format(self.isHandHistCreated))],
             [sg.Text('Execution started  :{0} ({1})'.format(self.startExecute,self.process.app))],
             [sg.Text('Prediction started :{}'.format(self.startPredict))],
